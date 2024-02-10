@@ -8,6 +8,7 @@ Shader "Custom/ChunkShader"
         _Metallic ("Metallic", Range(0,1)) = 0.0
         _Offset ("Offset", Vector) = (0,0,0)
         _Size ("Size", Vector) = (1.0, 1.0, 1.0)
+        _Heightmap ("Heightmap", 2D) = "white" {}
     }
     SubShader
     {
@@ -36,6 +37,7 @@ Shader "Custom/ChunkShader"
         fixed4 _Color;
         float3 _Offset;
         float3 _Size;
+        sampler2D _Heightmap;
 
         // Add instancing support for this shader. You need to check 'Enable Instancing' on materials that use the shader.
         // See https://docs.unity3d.com/Manual/GPUInstancing.html for more information about instancing.
