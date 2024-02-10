@@ -27,17 +27,20 @@ public class CPUClipmapTerrain : MonoBehaviour
     void InstantiateObject(Mesh mesh, Material material, Vector3 position, Vector3 size)
     {
         GameObject obj = new GameObject("Chunk");
-        obj.transform.position = Vector3.zero;
+        obj.transform.SetParent(transform);
+        obj.transform.localPosition = position;
+        obj.transform.localScale = size;
 
         var meshFilter = obj.AddComponent<MeshFilter>();
         meshFilter.mesh = mesh;
         var meshRenderer = obj.AddComponent<MeshRenderer>();
         meshRenderer.sharedMaterial = material;
+        obj.AddComponent<ChunkUpdater>();
 
-        MaterialPropertyBlock mpb = new MaterialPropertyBlock();
-        mpb.SetVector("_Offset", position);
-        mpb.SetVector("_Size", size);
-        meshRenderer.SetPropertyBlock(mpb);
+        //MaterialPropertyBlock mpb = new MaterialPropertyBlock();
+        //mpb.SetVector("_Offset", position);
+        //mpb.SetVector("_Size", size);
+        //meshRenderer.SetPropertyBlock(mpb);
     }
 
     Mesh CreatePlaneMesh(int n, int m)

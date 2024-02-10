@@ -47,11 +47,7 @@ Shader "Custom/ChunkShader"
         // Custom vertex shader function
         void vert(inout appdata_full v)
         {
-            // Apply size
-            v.vertex.xyz *= _Size;
-    
-            // Apply offset
-            v.vertex.xyz += _Offset;
+            
         }
 
         void surf (Input IN, inout SurfaceOutputStandard o)
