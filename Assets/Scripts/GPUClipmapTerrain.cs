@@ -22,63 +22,76 @@ public class CPUClipmapTerrain : MonoBehaviour
 
     class TerrainLevel
     {
-        private GameObject[] _squareChunks;
-        private GameObject[] _borderFillers;
-        private GameObject[] _interiorFillers;
+        private TerrainData _terrainData;
+        private int _level;
 
-        public TerrainLevel(int chunkResolution, TerrainData terrainData)
+        private GameObject[] _squareChunks = new GameObject[12];
+        private GameObject[] _verticalBorders = new GameObject[2];
+        private GameObject[] _horizontalBorders = new GameObject[2];
+        private GameObject _interiorVertical;
+        private GameObject _interiorHorizontal;
+
+        public TerrainLevel(int level, TerrainData terrainData)
         {
-            _squareChunks = new GameObject[12];
-            _borderFillers = new GameObject[4];
-            _interiorFillers = new GameObject[2];
+            _level = level;
+            _terrainData = terrainData;
 
-            GenerateSquareChunks(chunkResolution, terrainData.ChunkResolution, terrainData.SquareChunkData, terrainData.Parent);
-            GenerateBorderFillers(chunkResolution, terrainData.ChunkResolution,
-                terrainData.BorderVerticalData, terrainData.BorderHorizontalData, terrainData.Parent);
+            GenerateSquareChunks();
+            GenerateBorderFillers();
             //GenerateInteriorFillers(chunkResolution, level, interiorFillerData);
         }
 
-        void GenerateBorderFillers(int level, int chunkResolution, ChunkData verticalData, ChunkData horizontalData, Transform parent)
+        void UpdateChunkPositions(Vector3 playerPosition)
         {
-            var size = new Vector3(1 << level, 1, 1 << level);
-
-            // Generate vertical fillers
-            InstantiateObject(parent, verticalData.Mesh, verticalData.Material,
-                new Vector3(size.x * ((chunkResolution - 1) + 1), 0, -size.z), size);
-            InstantiateObject(parent, verticalData.Mesh, verticalData.Material,
-                new Vector3(-size.x * (2 * (chunkResolution - 1) + 1), 0, -size.z), size);
-
-            // Generate horizontal fillers
-            InstantiateObject(parent, horizontalData.Mesh, horizontalData.Material, 
-                new Vector3(-size.x, 0, size.z * ((chunkResolution - 1) + 1)), size);
-            InstantiateObject(parent, horizontalData.Mesh, horizontalData.Material, 
-                new Vector3(-size.x, 0, -size.z * (2 * (chunkResolution - 1) + 1)), size);
+            
         }
 
-        void GenerateSquareChunks(int level, int chunkResolution, ChunkData squareChunkData, Transform parent)
+        void GenerateBorderFillers()
         {
-            var size = new Vector3(1 << level, 1, 1 << level);
+            var size = new Vector3(1 << _level, 1, 1 << _level);
+            var verticalData = _terrainData.BorderVerticalData;
+            var horizontalData = _terrainData.BorderHorizontalData;
 
+            // Generate vertical fillers
+            _verticalBorders[0] = InstantiateObject(verticalData.Mesh, verticalData.Material,
+                new Vector3(size.x * ((_terrainData.ChunkResolution - 1) + 1), 0, -size.z), size);
+            _verticalBorders[1] = InstantiateObject(verticalData.Mesh, verticalData.Material,
+                new Vector3(-size.x * (2 * (_terrainData.ChunkResolution - 1) + 1), 0, -size.z), size);
+
+            // Generate horizontal fillers
+            _horizontalBorders[0] = InstantiateObject(horizontalData.Mesh, horizontalData.Material,
+                new Vector3(-size.x, 0, size.z * ((_terrainData.ChunkResolution - 1) + 1)), size);
+            _horizontalBorders[1] = InstantiateObject(horizontalData.Mesh, horizontalData.Material,
+                new Vector3(-size.x, 0, -size.z * (2 * (_terrainData.ChunkResolution - 1) + 1)), size);
+        }
+
+        void GenerateSquareChunks()
+        {
+            var size = new Vector3(1 << _level, 1, 1 << _level);
+            var squareChunkData = _terrainData.SquareChunkData;
+
+            int chunkIndex = 0;
             for (int x = 0; x < 4; x++)
             {
                 for (int z = 0; z < 4; z++)
                 {
                     if (x == 0 || x == 3 || z == 0 || z == 3)
                     {
-                        int offsetX = (x - 2) * (chunkResolution - 1) + ((x > 1) ? 1 : -1);
-                        int offsetZ = (z - 2) * (chunkResolution - 1) + ((z > 1) ? 1 : -1);
+                        int offsetX = (x - 2) * (_terrainData.ChunkResolution - 1) + ((x > 1) ? 1 : -1);
+                        int offsetZ = (z - 2) * (_terrainData.ChunkResolution - 1) + ((z > 1) ? 1 : -1);
 
-                        InstantiateObject(parent, squareChunkData.Mesh, squareChunkData.Material,
+                        _squareChunks[chunkIndex++] =
+                            InstantiateObject(squareChunkData.Mesh, squareChunkData.Material,
                             new Vector3(offsetX * size.x, 0, offsetZ * size.z), size);
                     }
                 }
             }
         }
 
-        void InstantiateObject(Transform parent, Mesh mesh, Material material, Vector3 position, Vector3 size)
+        GameObject InstantiateObject(Mesh mesh, Material material, Vector3 position, Vector3 size)
         {
             GameObject obj = new GameObject("Chunk");
-            obj.transform.SetParent(parent);
+            obj.transform.SetParent(_terrainData.Parent);
             obj.transform.localPosition = position;
             obj.transform.localScale = size;
 
@@ -87,7 +100,10 @@ public class CPUClipmapTerrain : MonoBehaviour
             var meshRenderer = obj.AddComponent<MeshRenderer>();
             meshRenderer.sharedMaterial = material;
             obj.AddComponent<ChunkUpdater>();
+
+            return obj;
         }
+
     }
     public Transform player;
     public Texture2D heightmap;
