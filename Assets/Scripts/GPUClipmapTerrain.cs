@@ -28,10 +28,13 @@ public class CPUClipmapTerrain : MonoBehaviour
         private TerrainData _terrainData;
         private GameObject[] _squareChunks = new GameObject[16];
         private GameObject _centerCross;
+        private Texture2D _heightmap;
 
-        public TerrainCenter(TerrainData terrainData)
+        public TerrainCenter(TerrainData terrainData, Texture2D heightmap)
         {
             _terrainData = terrainData;
+            _heightmap = heightmap;
+
             GenerateSquareChunks();
             GenerateCenterCross();
         }
@@ -285,7 +288,7 @@ public class CPUClipmapTerrain : MonoBehaviour
             CenterCrossData = new ChunkData { Mesh = centerCrossMesh, Material = material }
         };
 
-        _terrainCenter = new TerrainCenter(terrainData);
+        _terrainCenter = new TerrainCenter(terrainData, null);
         for (int i = 0; i < numberOfLevels; i++)
         {
             var terrainLevel = new TerrainRing(i + 1, terrainData);

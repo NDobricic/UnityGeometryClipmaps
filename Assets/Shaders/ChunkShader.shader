@@ -9,6 +9,9 @@ Shader "Custom/ChunkShader"
         _Offset ("Offset", Vector) = (0,0,0)
         _Size ("Size", Vector) = (1.0, 1.0, 1.0)
         _Heightmap ("Heightmap", 2D) = "white" {}
+        // slider for the noise scale
+        _NoiseFrequency ("Noise Frequency", Range(0.01, 200)) = 100
+        _MaxHeight ("Max Height", Range(0, 100)) = 50
     }
     SubShader
     {
@@ -16,6 +19,8 @@ Shader "Custom/ChunkShader"
         LOD 200
 
         CGPROGRAM
+        #include "Packages/jp.keijiro.noiseshader/Shader/ClassicNoise2D.hlsl"
+
         // Physically based Standard lighting model, and enable shadows on all light types
         #pragma surface surf Standard fullforwardshadows
 
@@ -38,6 +43,8 @@ Shader "Custom/ChunkShader"
         float3 _Offset;
         float3 _Size;
         sampler2D _Heightmap;
+        float _NoiseFrequency;
+        float _MaxHeight;
 
         // Add instancing support for this shader. You need to check 'Enable Instancing' on materials that use the shader.
         // See https://docs.unity3d.com/Manual/GPUInstancing.html for more information about instancing.
@@ -49,7 +56,22 @@ Shader "Custom/ChunkShader"
         // Custom vertex shader function
         void vert(inout appdata_full v)
         {
-            
+            float h = ClassicNoise(float2(_Offset.x + v.vertex.x * _Size.x, _Offset.z + v.vertex.z * _Size.z) / _NoiseFrequency) * _MaxHeight;
+            v.vertex.y += h;
+
+            // Approximate the partial derivatives
+            float dx = 0.01; // Small offset in x
+            float dz = 0.01; // Small offset in z
+            float h_dx = ClassicNoise(float2(_Offset.x + (v.vertex.x + dx) * _Size.x, _Offset.z + v.vertex.z * _Size.z) / _NoiseFrequency) * _MaxHeight;
+            float h_dz = ClassicNoise(float2(_Offset.x + v.vertex.x * _Size.x, _Offset.z + (v.vertex.z + dz) * _Size.z) / _NoiseFrequency) * _MaxHeight;
+
+            // Calculate gradient vector components
+            float grad_x = (h_dx - h) / dx;
+            float grad_z = (h_dz - h) / dz;
+
+            // Construct normal vector from gradient
+            float3 normal = normalize(float3(-grad_x, 1.0, -grad_z));
+            v.normal = normal;
         }
 
         void surf (Input IN, inout SurfaceOutputStandard o)
