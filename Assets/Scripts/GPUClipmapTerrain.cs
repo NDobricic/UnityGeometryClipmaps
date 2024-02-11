@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Drawing;
 using UnityEngine;
 
 public class CPUClipmapTerrain : MonoBehaviour
@@ -14,14 +15,97 @@ public class CPUClipmapTerrain : MonoBehaviour
         public ChunkData BorderHorizontalData;
         public ChunkData InteriorVerticalData;
         public ChunkData InteriorHorizontalData;
+        public ChunkData CenterCrossData;
     }
     struct ChunkData
     {
         public Mesh Mesh;
         public Material Material;
     }
+    
+    class TerrainCenter
+    {
+        private TerrainData _terrainData;
+        private GameObject[] _squareChunks = new GameObject[16];
+        private GameObject _centerCross;
 
-    class TerrainLevel
+        public TerrainCenter(TerrainData terrainData)
+        {
+            _terrainData = terrainData;
+            GenerateSquareChunks();
+            GenerateCenterCross();
+        }
+
+        public void UpdateChunkPositions(Vector3 playerPosition)
+        {
+            var chunkResolution = _terrainData.ChunkResolution;
+
+            var offset = new Vector3(
+                Mathf.Floor(playerPosition.x / 2) * 2 + 1,
+                0,
+                Mathf.Floor(playerPosition.z / 2) * 2 + 1);
+
+            // Update square chunks
+            int squareChunkIndex = 0;
+            for (int x = 0; x < 4; x++)
+            {
+                for (int z = 0; z < 4; z++)
+                {
+                    int offsetX = (x - 2) * (chunkResolution - 1) + ((x > 1) ? 1 : -1);
+                    int offsetZ = (z - 2) * (chunkResolution - 1) + ((z > 1) ? 1 : -1);
+
+                    _squareChunks[squareChunkIndex++].transform.localPosition =
+                    new Vector3(offsetX, 0, offsetZ) + offset;
+                }
+            }
+
+            // Update center cross
+            _centerCross.transform.localPosition = offset;
+        }
+
+        void GenerateCenterCross()
+        {
+            _centerCross = InstantiateObject(_terrainData.CenterCrossData.Mesh, _terrainData.CenterCrossData.Material,
+                               new Vector3(0, 0, 0), new Vector3(1, 1, 1), "CenterCross");
+        }
+
+        void GenerateSquareChunks()
+        {
+            var squareChunkData = _terrainData.SquareChunkData;
+
+            int chunkIndex = 0;
+            for (int x = 0; x < 4; x++)
+            {
+                for (int z = 0; z < 4; z++)
+                {
+                    int offsetX = (x - 2) * (_terrainData.ChunkResolution - 1) + ((x > 1) ? 1 : -1);
+                    int offsetZ = (z - 2) * (_terrainData.ChunkResolution - 1) + ((z > 1) ? 1 : -1);
+
+                    _squareChunks[chunkIndex++] =
+                        InstantiateObject(squareChunkData.Mesh, squareChunkData.Material,
+                        new Vector3(offsetX, 0, offsetZ), new Vector3(1, 1, 1), $"Square{chunkIndex}_Center");
+                }
+            }
+        }
+
+        GameObject InstantiateObject(Mesh mesh, Material material, Vector3 position, Vector3 size, string name = "Chunk")
+        {
+            GameObject obj = new GameObject(name);
+            obj.transform.SetParent(_terrainData.Parent);
+            obj.transform.localPosition = position;
+            obj.transform.localScale = size;
+
+            var meshFilter = obj.AddComponent<MeshFilter>();
+            meshFilter.mesh = mesh;
+            var meshRenderer = obj.AddComponent<MeshRenderer>();
+            meshRenderer.sharedMaterial = material;
+            obj.AddComponent<ChunkUpdater>();
+
+            return obj;
+        }
+    }
+
+    class TerrainRing
     {
         private TerrainData _terrainData;
         private int _level;
@@ -32,7 +116,7 @@ public class CPUClipmapTerrain : MonoBehaviour
         private GameObject _interiorVertical;
         private GameObject _interiorHorizontal;
 
-        public TerrainLevel(int level, TerrainData terrainData)
+        public TerrainRing(int level, TerrainData terrainData)
         {
             _level = level;
             _terrainData = terrainData;
@@ -169,11 +253,12 @@ public class CPUClipmapTerrain : MonoBehaviour
     public int chunkResolution = 16;
     public int numberOfLevels = 3;
 
-    private TerrainLevel[] _terrainLevels;
+    private TerrainRing[] _terrainLevels;
+    private TerrainCenter _terrainCenter;
 
     void Start()
     {
-        _terrainLevels = new TerrainLevel[numberOfLevels];
+        _terrainLevels = new TerrainRing[numberOfLevels];
         GenerateTerrain();
     }
 
@@ -184,6 +269,7 @@ public class CPUClipmapTerrain : MonoBehaviour
         Mesh borderHorizontalMesh = CreatePlaneMesh(3, chunkResolution);
         Mesh interiorVerticalMesh = CreatePlaneMesh(2 * chunkResolution + 1, 2);
         Mesh interiorHorizontalMesh = CreatePlaneMesh(2, 2 * chunkResolution + 1);
+        Mesh centerCrossMesh = CreateCrossMesh(chunkResolution * 4 - 1);
 
         Material material = new Material(Shader.Find("Custom/ChunkShader"));
 
@@ -195,12 +281,14 @@ public class CPUClipmapTerrain : MonoBehaviour
             BorderVerticalData = new ChunkData { Mesh = borderVerticalMesh, Material = material },
             BorderHorizontalData = new ChunkData { Mesh = borderHorizontalMesh, Material = material },
             InteriorVerticalData = new ChunkData { Mesh = interiorVerticalMesh, Material = material },
-            InteriorHorizontalData = new ChunkData { Mesh = interiorHorizontalMesh, Material = material }
+            InteriorHorizontalData = new ChunkData { Mesh = interiorHorizontalMesh, Material = material },
+            CenterCrossData = new ChunkData { Mesh = centerCrossMesh, Material = material }
         };
 
+        _terrainCenter = new TerrainCenter(terrainData);
         for (int i = 0; i < numberOfLevels; i++)
         {
-            var terrainLevel = new TerrainLevel(i, terrainData);
+            var terrainLevel = new TerrainRing(i + 1, terrainData);
             _terrainLevels[i] = terrainLevel;
         }
     }
@@ -253,10 +341,83 @@ public class CPUClipmapTerrain : MonoBehaviour
         return mesh;
     }
 
+    Mesh CreateCrossMesh(int size)
+    {
+        Mesh mesh = new Mesh();
+
+        var vertices = new Vector3[size * 3 * 2];
+        var triangles = new int[(size - 1) * 4 * 2 * 3];
+
+        // Generate vertical arm
+        for (int i = 0; i < size; i++)
+        {
+            vertices[i * 3] = new Vector3(-1, 0, size / 2 - i);
+            vertices[i * 3 + 1] = new Vector3(0, 0, size / 2 - i);
+            vertices[i * 3 + 2] = new Vector3(1, 0, size / 2 - i);
+        }
+
+        for (int i = 0; i < size - 1; i++)
+        {
+            int ti = i * 12;
+            int vi = i * 3;
+
+            triangles[ti] = vi;
+            triangles[ti + 1] = vi + 1;
+            triangles[ti + 2] = vi + 3;
+            triangles[ti + 3] = vi + 1;
+            triangles[ti + 4] = vi + 4;
+            triangles[ti + 5] = vi + 3;
+
+            triangles[ti + 6] = vi + 1;
+            triangles[ti + 7] = vi + 2;
+            triangles[ti + 8] = vi + 4;
+            triangles[ti + 9] = vi + 2;
+            triangles[ti + 10] = vi + 5;
+            triangles[ti + 11] = vi + 4;
+        }
+
+        // Generate horizontal arm
+        for (int i = 0; i < size; i++)
+        {
+            vertices[(size + i) * 3] = new Vector3(size / 2 - i, 0, -1);
+            vertices[(size + i) * 3 + 1] = new Vector3(size / 2 - i, 0, 0);
+            vertices[(size + i) * 3 + 2] = new Vector3(size / 2 - i, 0, 1);
+        }
+
+        for (int i = 0; i < size - 1; i++)
+        {
+            int ti = (size - 1) * 12 + i * 12;
+            int vi = (size + i) * 3;
+
+            triangles[ti] = vi;
+            triangles[ti + 1] = vi + 3;
+            triangles[ti + 2] = vi + 1;
+            triangles[ti + 3] = vi + 1;
+            triangles[ti + 4] = vi + 3;
+            triangles[ti + 5] = vi + 4;
+
+            triangles[ti + 6] = vi + 1;
+            triangles[ti + 7] = vi + 4;
+            triangles[ti + 8] = vi + 2;
+            triangles[ti + 9] = vi + 2;
+            triangles[ti + 10] = vi + 4;
+            triangles[ti + 11] = vi + 5;
+        }
+
+        mesh.vertices = vertices;
+        mesh.triangles = triangles;
+
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+
+        return mesh;
+    }
+
 
 
     void Update()
     {
+        _terrainCenter.UpdateChunkPositions(player.position);
         foreach (var terrainLevel in _terrainLevels)
         {
             terrainLevel.UpdateChunkPositions(player.position);
