@@ -28,12 +28,10 @@ public class CPUClipmapTerrain : MonoBehaviour
         private TerrainData _terrainData;
         private GameObject[] _squareChunks = new GameObject[16];
         private GameObject _centerCross;
-        private Texture2D _heightmap;
 
-        public TerrainCenter(TerrainData terrainData, Texture2D heightmap)
+        public TerrainCenter(TerrainData terrainData)
         {
             _terrainData = terrainData;
-            _heightmap = heightmap;
 
             GenerateSquareChunks();
             GenerateCenterCross();
@@ -110,6 +108,8 @@ public class CPUClipmapTerrain : MonoBehaviour
 
     class TerrainRing
     {
+        public CustomRenderTexture Heightmap => _heightmap;
+
         private TerrainData _terrainData;
         private int _level;
 
@@ -118,11 +118,27 @@ public class CPUClipmapTerrain : MonoBehaviour
         private GameObject[] _horizontalBorders = new GameObject[2];
         private GameObject _interiorVertical;
         private GameObject _interiorHorizontal;
+        private CustomRenderTexture _heightmap;
+        private CustomRenderTexture _lowResHeightmap;
 
-        public TerrainRing(int level, TerrainData terrainData)
+        private Vector3 _previousPlayerPos;
+
+        public TerrainRing(int level, TerrainData terrainData, Shader heightmapShader, CustomRenderTexture lowResHeightmap)
         {
+            _previousPlayerPos = Vector3.zero;
+
             _level = level;
             _terrainData = terrainData;
+            _lowResHeightmap = lowResHeightmap;
+
+            _heightmap = new CustomRenderTexture(terrainData.ChunkResolution * 4 - 1, 
+                terrainData.ChunkResolution * 4 - 1, RenderTextureFormat.RFloat);
+            _heightmap.wrapMode = TextureWrapMode.Repeat;
+            _heightmap.filterMode = FilterMode.Point;
+            _heightmap.useMipMap = false;
+            _heightmap.material = new Material(heightmapShader);
+            _heightmap.material.SetFloat("_NoiseFrequency", 1f / (1 << level));
+            _heightmap.Update();
 
             GenerateSquareChunks();
             GenerateBorderFillers();
@@ -133,11 +149,24 @@ public class CPUClipmapTerrain : MonoBehaviour
         {
             var size = new Vector3(1 << _level, 1, 1 << _level);
             var chunkResolution = _terrainData.ChunkResolution;
+            var tileSize = 4 * chunkResolution - 1;
 
             var offset = new Vector3(
                 Mathf.Floor(playerPosition.x / (2 << _level)) * (2 << _level) + size.x,
                 0,
                 Mathf.Floor(playerPosition.z / (2 << _level)) * (2 << _level) + size.z);
+
+            //_heightmap.material.SetVector("_Offset", 
+            //    new Vector4(
+            //        offset.x - (2 * (chunkResolution - 1) - 1), 
+            //        0,
+            //        offset.z - (2 * (chunkResolution - 1) - 1), 
+            //        0));
+
+            var playerPosNormalized =
+                new Vector3((playerPosition.x + offset.x) / size.x, (playerPosition.z + offset.z) / size.z, 0) / tileSize / 2;
+            _heightmap.material.SetVector("_Origin", playerPosNormalized);
+            _heightmap.Update();
 
             // Update square chunks
             int squareChunkIndex = 0;
@@ -245,6 +274,9 @@ public class CPUClipmapTerrain : MonoBehaviour
             var meshRenderer = obj.AddComponent<MeshRenderer>();
             meshRenderer.sharedMaterial = material;
             obj.AddComponent<ChunkUpdater>();
+            var mbp = new MaterialPropertyBlock();
+            mbp.SetTexture("_Heightmap", _heightmap);
+            meshRenderer.SetPropertyBlock(mbp);
 
             return obj;
         }
@@ -252,7 +284,6 @@ public class CPUClipmapTerrain : MonoBehaviour
     }
 
     public Transform player;
-    public Texture2D heightmap;
     public int chunkResolution = 16;
     public int numberOfLevels = 3;
 
@@ -275,6 +306,7 @@ public class CPUClipmapTerrain : MonoBehaviour
         Mesh centerCrossMesh = CreateCrossMesh(chunkResolution * 4 - 1);
 
         Material material = new Material(Shader.Find("Custom/ChunkShader"));
+        material.SetFloat("_TileSize", 4f * chunkResolution - 1);
 
         TerrainData terrainData = new TerrainData
         {
@@ -288,11 +320,19 @@ public class CPUClipmapTerrain : MonoBehaviour
             CenterCrossData = new ChunkData { Mesh = centerCrossMesh, Material = material }
         };
 
-        _terrainCenter = new TerrainCenter(terrainData, null);
-        for (int i = 0; i < numberOfLevels; i++)
+        Shader heightmapShader = Shader.Find("Custom/HeightmapShader");
+
+        _terrainCenter = new TerrainCenter(terrainData);
+        for (int i = numberOfLevels - 1; i >= 0; i--)
         {
-            var terrainLevel = new TerrainRing(i + 1, terrainData);
-            _terrainLevels[i] = terrainLevel;
+            if (i == numberOfLevels - 1)
+            {
+                _terrainLevels[i] = new TerrainRing(i + 1, terrainData, heightmapShader, null);
+            }
+            else
+            {
+                _terrainLevels[i] = new TerrainRing(i + 1, terrainData, heightmapShader, _terrainLevels[i + 1].Heightmap);
+            }
         }
     }
 

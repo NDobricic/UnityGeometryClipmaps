@@ -15,7 +15,7 @@ public class ChunkUpdater : MonoBehaviour
         _mpb = new MaterialPropertyBlock();
         _renderer.GetPropertyBlock(_mpb);
 
-        _offsetPropertyId = Shader.PropertyToID("_Offset");
+        _offsetPropertyId = Shader.PropertyToID("_Origin");
         _sizePropertyId = Shader.PropertyToID("_Size");
     }
 
