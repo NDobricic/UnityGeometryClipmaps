@@ -9,6 +9,7 @@ public partial class GPUClipmapTerrain : MonoBehaviour
     public Transform player;
     public int chunkResolution = 16;
     public int numberOfLevels = 3;
+    public float maxHeight = 50.0f;
 
     private TerrainRing[] _terrainLevels;
     private TerrainCenter _terrainCenter;
@@ -34,6 +35,7 @@ public partial class GPUClipmapTerrain : MonoBehaviour
         TerrainData terrainData = new TerrainData
         {
             ChunkResolution = chunkResolution,
+            MaxHeight = maxHeight,
             Parent = transform,
             PlayerTransform = player,
             SquareChunkData = new ChunkPieceInfo { Mesh = squareChunkMesh, Material = material },

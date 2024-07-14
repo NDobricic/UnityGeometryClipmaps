@@ -32,6 +32,8 @@ public partial class GPUClipmapTerrain
             };
 
             _heightmap.material.SetFloat("_NoiseFrequency", 1f / (1 << level));
+            _heightmap.material.SetFloat("_Size", (4f * terrainData.ChunkResolution - 1) * (1 << level));
+            _heightmap.material.SetFloat("_MaxHeight", terrainData.MaxHeight);
             _heightmap.Update();
         }
 
@@ -61,6 +63,7 @@ public partial class GPUClipmapTerrain
             updater.player = playerTransform;
             var mbp = new MaterialPropertyBlock();
             mbp.SetTexture("_Heightmap", _heightmap);
+            mbp.SetFloat("_MaxHeight", _terrainData.MaxHeight);
             if (_lowResHeightmap != null)
             {
                 mbp.SetTexture("_LowResHeightmap", _lowResHeightmap);

@@ -5,6 +5,7 @@ public partial class GPUClipmapTerrain
     class TerrainData
     {
         public int ChunkResolution;
+        public float MaxHeight;
         public Transform Parent;
         public Transform PlayerTransform;
         public ChunkPieceInfo SquareChunkData;

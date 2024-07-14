@@ -5,6 +5,8 @@ Shader "Custom/HeightmapShader"
         _Offset("Offset", Vector) = (0, 0, 0)
         _Origin("Origin", Vector) = (0, 0, 0)
         _NoiseFrequency("Noise Frequency", Float) = 10
+        _Size("Size", Float) = 1
+        _MaxHeight("Max Height", Float) = 1
     }
 
     SubShader
@@ -26,14 +28,13 @@ Shader "Custom/HeightmapShader"
             float3 _Offset;
             float3 _Origin;
             float _NoiseFrequency;
+            float _Size;
+			float _MaxHeight;
 
             float4 frag(v2f_customrendertexture IN) : COLOR
             {
                 float3 coordOffset = floor(_Origin);
                 float3 fraction = _Origin - floor(_Origin);
-
-                //return float4(noise, noise, noise, 1);
-                //return float4(IN.globalTexcoord.x, IN.globalTexcoord.y, 0, 1);
 
                 float2 coord = IN.globalTexcoord.xy + coordOffset;
                 if (IN.globalTexcoord.x < fraction.x) {
@@ -44,17 +45,14 @@ Shader "Custom/HeightmapShader"
                     coord += float2(0, 1);
                 }
 
-
                 float2 noiseCoord = (coord - float2(0.5, 0.5)) / _NoiseFrequency + _Offset.xz;
                 float3 noiseResult = noised(noiseCoord);
                 
                 float noise = noiseResult.x;
                 float2 derivatives = noiseResult.yz;
 
-                // Calculate normal
-                float3 normal = normalize(float3(-derivatives.x / _NoiseFrequency, 1.0, -derivatives.y / _NoiseFrequency));
+                float3 normal = normalize(float3(-derivatives.x * _Size, _MaxHeight, -derivatives.y * _Size));
                 
-                // Convert normal from [-1, 1] to [0, 1] range
                 normal = normal * 0.5 + 0.5;
 
                 return float4(noise, normal);
