@@ -23,10 +23,10 @@ public partial class GPUClipmapTerrain
             _lowResHeightmap = lowResHeightmap;
 
             _heightmap = new CustomRenderTexture(terrainData.ChunkResolution * 4 - 1,
-                terrainData.ChunkResolution * 4 - 1, RenderTextureFormat.RFloat)
+                terrainData.ChunkResolution * 4 - 1, RenderTextureFormat.ARGBFloat)
             {
                 wrapMode = TextureWrapMode.Repeat,
-                filterMode = FilterMode.Point,
+                filterMode = FilterMode.Bilinear,
                 useMipMap = false,
                 material = new Material(heightmapShader)
             };
@@ -46,7 +46,7 @@ public partial class GPUClipmapTerrain
             _heightmap.Update();
         }
 
-        protected GameObject InstantiatePiece(Mesh mesh, Material material, Vector3 position, Vector3 size, string name = "Chunk")
+        protected GameObject InstantiatePiece(Mesh mesh, Material material, Vector3 position, Vector3 size, Transform playerTransform, string name = "Chunk")
         {
             GameObject obj = new GameObject(name);
             obj.transform.SetParent(_terrainData.Parent);
@@ -57,9 +57,18 @@ public partial class GPUClipmapTerrain
             meshFilter.mesh = mesh;
             var meshRenderer = obj.AddComponent<MeshRenderer>();
             meshRenderer.sharedMaterial = material;
-            obj.AddComponent<ChunkUpdater>();
+            var updater = obj.AddComponent<ChunkUpdater>();
+            updater.player = playerTransform;
             var mbp = new MaterialPropertyBlock();
             mbp.SetTexture("_Heightmap", _heightmap);
+            if (_lowResHeightmap != null)
+            {
+                mbp.SetTexture("_LowResHeightmap", _lowResHeightmap);
+            }
+            else
+            {
+                mbp.SetTexture("_LowResHeightmap", _heightmap);
+            }
             meshRenderer.SetPropertyBlock(mbp);
 
             return obj;

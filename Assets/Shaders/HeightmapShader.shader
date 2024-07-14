@@ -17,6 +17,7 @@ Shader "Custom/HeightmapShader"
             CGPROGRAM
             #include "UnityCustomRenderTexture.cginc"
             #include "Packages/jp.keijiro.noiseshader/Shader/ClassicNoise2D.hlsl"
+            #include "GradientNoise2D.hlsl"
 
             #pragma vertex CustomRenderTextureVertexShader
             #pragma fragment frag
@@ -43,11 +44,20 @@ Shader "Custom/HeightmapShader"
                     coord += float2(0, 1);
                 }
 
-                
-                //return float4(coord.x / 2, coord.y / 2, 0, 1);
-                float noise = ClassicNoise((coord - float2(0.5, 0.5)) / _NoiseFrequency + _Offset.xz);
 
-                return float4(noise, noise, noise, 1);
+                float2 noiseCoord = (coord - float2(0.5, 0.5)) / _NoiseFrequency + _Offset.xz;
+                float3 noiseResult = noised(noiseCoord);
+                
+                float noise = noiseResult.x;
+                float2 derivatives = noiseResult.yz;
+
+                // Calculate normal
+                float3 normal = normalize(float3(-derivatives.x / _NoiseFrequency, 1.0, -derivatives.y / _NoiseFrequency));
+                
+                // Convert normal from [-1, 1] to [0, 1] range
+                normal = normal * 0.5 + 0.5;
+
+                return float4(noise, normal);
             }
             ENDCG
         }

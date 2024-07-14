@@ -78,11 +78,11 @@ public partial class GPUClipmapTerrain
 
             // Generate vertical filler
             _interiorVertical = InstantiatePiece(_terrainData.InteriorVerticalData.Mesh,
-                _terrainData.InteriorVerticalData.Material, new Vector3(0, 0, 0), size, $"InteriorVertical_{_level}");
+                _terrainData.InteriorVerticalData.Material, new Vector3(0, 0, 0), size, _terrainData.PlayerTransform, $"InteriorVertical_{_level}");
 
             // Generate horizontal filler
             _interiorHorizontal = InstantiatePiece(_terrainData.InteriorHorizontalData.Mesh,
-                _terrainData.InteriorHorizontalData.Material, new Vector3(0, 0, 0), size, $"InteriorHorizontal_{_level}");
+                _terrainData.InteriorHorizontalData.Material, new Vector3(0, 0, 0), size, _terrainData.PlayerTransform, $"InteriorHorizontal_{_level}");
         }
 
         void GenerateSquareChunks()
@@ -102,7 +102,7 @@ public partial class GPUClipmapTerrain
 
                         _squareChunks[chunkIndex++] =
                             InstantiatePiece(squareChunkData.Mesh, squareChunkData.Material,
-                            new Vector3(offsetX * size.x, 0, offsetZ * size.z), size, $"Square{chunkIndex}_{_level}");
+                            new Vector3(offsetX * size.x, 0, offsetZ * size.z), size, _terrainData.PlayerTransform, $"Square{chunkIndex}_{_level}");
                     }
                 }
             }
@@ -116,15 +116,15 @@ public partial class GPUClipmapTerrain
 
             // Generate vertical fillers
             _verticalBorders[0] = InstantiatePiece(verticalData.Mesh, verticalData.Material,
-                new Vector3(size.x * ((_terrainData.ChunkResolution - 1) + 1), 0, -size.z), size, $"VerticalBorder0_{_level}");
+                new Vector3(size.x * ((_terrainData.ChunkResolution - 1) + 1), 0, -size.z), size, _terrainData.PlayerTransform, $"VerticalBorder0_{_level}");
             _verticalBorders[1] = InstantiatePiece(verticalData.Mesh, verticalData.Material,
-                new Vector3(-size.x * (2 * (_terrainData.ChunkResolution - 1) + 1), 0, -size.z), size, $"VerticalBorder1_{_level}");
+                new Vector3(-size.x * (2 * (_terrainData.ChunkResolution - 1) + 1), 0, -size.z), size, _terrainData.PlayerTransform, $"VerticalBorder1_{_level}");
 
             // Generate horizontal fillers
             _horizontalBorders[0] = InstantiatePiece(horizontalData.Mesh, horizontalData.Material,
-                new Vector3(-size.x, 0, size.z * ((_terrainData.ChunkResolution - 1) + 1)), size, $"HorizontalBorder0_{_level}");
+                new Vector3(-size.x, 0, size.z * ((_terrainData.ChunkResolution - 1) + 1)), size, _terrainData.PlayerTransform, $"HorizontalBorder0_{_level}");
             _horizontalBorders[1] = InstantiatePiece(horizontalData.Mesh, horizontalData.Material,
-                new Vector3(-size.x, 0, -size.z * (2 * (_terrainData.ChunkResolution - 1) + 1)), size, $"HorizontalBorder1_{_level}");
+                new Vector3(-size.x, 0, -size.z * (2 * (_terrainData.ChunkResolution - 1) + 1)), size, _terrainData.PlayerTransform, $"HorizontalBorder1_{_level}");
         }
 
     }

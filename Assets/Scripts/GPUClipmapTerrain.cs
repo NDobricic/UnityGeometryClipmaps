@@ -35,6 +35,7 @@ public partial class GPUClipmapTerrain : MonoBehaviour
         {
             ChunkResolution = chunkResolution,
             Parent = transform,
+            PlayerTransform = player,
             SquareChunkData = new ChunkPieceInfo { Mesh = squareChunkMesh, Material = material },
             BorderVerticalData = new ChunkPieceInfo { Mesh = borderVerticalMesh, Material = material },
             BorderHorizontalData = new ChunkPieceInfo { Mesh = borderHorizontalMesh, Material = material },
@@ -45,7 +46,6 @@ public partial class GPUClipmapTerrain : MonoBehaviour
 
         Shader heightmapShader = Shader.Find("Custom/HeightmapShader");
 
-        _terrainCenter = new TerrainCenter(terrainData, heightmapShader, null);
         for (int i = numberOfLevels - 1; i >= 0; i--)
         {
             if (i == numberOfLevels - 1)
@@ -57,14 +57,17 @@ public partial class GPUClipmapTerrain : MonoBehaviour
                 _terrainLevels[i] = new TerrainRing(i + 1, terrainData, heightmapShader, _terrainLevels[i + 1].Heightmap);
             }
         }
+
+        _terrainCenter = new TerrainCenter(terrainData, heightmapShader, _terrainLevels[0].Heightmap);
     }
 
     void Update()
     {
         _terrainCenter.UpdateChunkPositions(player.position);
-        foreach (var terrainLevel in _terrainLevels)
+        
+        for (int i = 0; i < numberOfLevels; i++)
         {
-            terrainLevel.UpdateChunkPositions(player.position);
+            _terrainLevels[i].UpdateChunkPositions(player.position);
         }
     }
 }

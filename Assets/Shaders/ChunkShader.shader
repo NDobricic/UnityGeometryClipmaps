@@ -4,13 +4,15 @@ Shader "Custom/ChunkShader"
     {
         _Color ("Color", Color) = (1,1,1,1)
         _MainTex ("Albedo (RGB)", 2D) = "white" {}
-        _Glossiness ("Smoothness", Range(0,1)) = 0.5
+        _Glossiness ("Smoothness", Range(0,1)) = 0.0
         _Metallic ("Metallic", Range(0,1)) = 0.0
         _Origin ("Origin", Vector) = (0,0,0)
         _Size ("Size", Vector) = (1.0, 1.0, 1.0)
+        _PlayerPos ("Player Position", Vector) = (0, 0, 0)
         _Heightmap ("Heightmap", 2D) = "white" {}
+        _LowResHeightmap ("Low Res Heightmap", 2D) = "white" {}
+        _BlendFactor ("Blend Factor", Range(0, 0.5)) = 0.125
         _TileSize ("Tile Size", Float) = 1.0
-        // slider for the noise scale
         _NoiseFrequency ("Noise Frequency", Range(0.01, 200)) = 100
         _MaxHeight ("Max Height", Range(0, 100)) = 50
     }
@@ -20,23 +22,23 @@ Shader "Custom/ChunkShader"
         LOD 200
 
         CGPROGRAM
-        #include "Packages/jp.keijiro.noiseshader/Shader/ClassicNoise2D.hlsl"
 
-        // Physically based Standard lighting model, and enable shadows on all light types
-        #pragma surface surf Standard fullforwardshadows
-
-        // Declare a vertex modifier function
-        #pragma vertex vert
-
-        // Use shader model 3.0 target, to get nicer looking lighting
-        #pragma target 3.0
+        #pragma surface surf Standard fullforwardshadows vertex:vert
+        #pragma target 3.5
 
         sampler2D _MainTex;
+        sampler2D _Heightmap;
+        sampler2D _LowResHeightmap;
 
         struct Input
         {
-            float3 height;
-            float4 coord;
+            float2 uv_MainTex;
+            float3 worldPos;
+            float2 heightmapCoord;
+            float2 lowResHeightmapCoord;
+            float alpha;
+            float height;
+            INTERNAL_DATA
         };
 
         half _Glossiness;
@@ -44,34 +46,52 @@ Shader "Custom/ChunkShader"
         fixed4 _Color;
         float3 _Origin;
         float3 _Size;
-        sampler2D _Heightmap;
+        float3 _PlayerPos;
         float _TileSize;
         float _NoiseFrequency;
         float _MaxHeight;
 
-        // Add instancing support for this shader. You need to check 'Enable Instancing' on materials that use the shader.
-        // See https://docs.unity3d.com/Manual/GPUInstancing.html for more information about instancing.
-        // #pragma instancing_options assumeuniformscaling
         UNITY_INSTANCING_BUFFER_START(Props)
-            // put more per-instance properties here
         UNITY_INSTANCING_BUFFER_END(Props)
 
-        // Custom vertex shader function
         void vert(inout appdata_full v, out Input o)
         {
-            float4 coord = float4(_Origin.x / _Size.x + v.vertex.x, _Origin.z / _Size.z + v.vertex.z, 0, 0) / _TileSize;
-            coord += float4(0.5, 0.5, 0, 0);
+            UNITY_INITIALIZE_OUTPUT(Input, o);
+            
+            float2 coord = float2(_Origin.x / _Size.x + v.vertex.x, _Origin.z / _Size.z + v.vertex.z) / _TileSize + 0.5;
+            float2 lowResCoord = float2(_Origin.x / _Size.x + v.vertex.x, _Origin.z / _Size.z + v.vertex.z) / (_TileSize * 2) + 0.5;
+            o.heightmapCoord = coord;
+            o.lowResHeightmapCoord = lowResCoord;
 
-            float3 h = tex2Dlod(_Heightmap, coord);
-            o.coord = coord;
-            o.height = h;
-            v.vertex.y = h.r * _MaxHeight;
+            float2 distPlayer = (((_Origin.xz + v.vertex.xz * _Size.xz) - _PlayerPos.xz) / _Size.xz / _TileSize + 0.5);
+            float alpha = 1.0 - min(min(distPlayer.x, 1.0 - distPlayer.x), min(distPlayer.y, 1.0 - distPlayer.y)) * 8;
+            alpha = clamp(alpha, 0, 1);
+            o.alpha = alpha;
+            
+            float4 heightData = tex2Dlod(_Heightmap, float4(coord, 0, 0));
+            float4 lowResHeightData = tex2Dlod(_LowResHeightmap, float4(lowResCoord, 0, 0));
+            
+            float height = lerp(heightData.r, lowResHeightData.r, alpha);
+            
+            o.height = height;
+            v.vertex.y = height * _MaxHeight;
+            
+            float3 normal = heightData.gba * 2 - 1;
+            v.normal = normal;
         }
 
         void surf (Input IN, inout SurfaceOutputStandard o)
         {
-            //o.Albedo = IN.height;
-            // Metallic and smoothness come from slider variables
+            fixed4 c = tex2D (_MainTex, IN.uv_MainTex) * _Color;
+            o.Albedo = c.rgb;
+            //o.Albedo = float3(IN.alpha, IN.alpha, IN.alpha);
+            
+            // Use the height to influence the color if desired
+            // o.Albedo *= IN.height;
+
+            //float3 normal = tex2D(_Heightmap, IN.heightmapUV).gba * 2 - 1;
+            //o.Normal = normal;
+            
             o.Metallic = _Metallic;
             o.Smoothness = _Glossiness;
         }

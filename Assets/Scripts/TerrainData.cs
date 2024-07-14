@@ -6,6 +6,7 @@ public partial class GPUClipmapTerrain
     {
         public int ChunkResolution;
         public Transform Parent;
+        public Transform PlayerTransform;
         public ChunkPieceInfo SquareChunkData;
         public ChunkPieceInfo BorderVerticalData;
         public ChunkPieceInfo BorderHorizontalData;

@@ -46,7 +46,7 @@ public partial class GPUClipmapTerrain
         void GenerateCenterCross()
         {
             _centerCross = InstantiatePiece(_terrainData.CenterCrossData.Mesh, _terrainData.CenterCrossData.Material,
-                               new Vector3(0, 0, 0), new Vector3(1, 1, 1), "CenterCross");
+                               new Vector3(0, 0, 0), new Vector3(1, 1, 1), _terrainData.PlayerTransform, "CenterCross");
         }
 
         void GenerateSquareChunks()
@@ -63,7 +63,7 @@ public partial class GPUClipmapTerrain
 
                     _squareChunks[chunkIndex++] =
                         InstantiatePiece(squareChunkData.Mesh, squareChunkData.Material,
-                        new Vector3(offsetX, 0, offsetZ), new Vector3(1, 1, 1), $"Square{chunkIndex}_Center");
+                        new Vector3(offsetX, 0, offsetZ), new Vector3(1, 1, 1), _terrainData.PlayerTransform, $"Square{chunkIndex}_Center");
                 }
             }
         }
