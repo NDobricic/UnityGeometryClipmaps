@@ -57,10 +57,14 @@ public partial class GPUClipmapTerrain
 
             var meshFilter = obj.AddComponent<MeshFilter>();
             meshFilter.mesh = mesh;
+            AdjustMeshBounds(meshFilter);
+
             var meshRenderer = obj.AddComponent<MeshRenderer>();
             meshRenderer.sharedMaterial = material;
+
             var updater = obj.AddComponent<ChunkUpdater>();
             updater.player = playerTransform;
+
             var mbp = new MaterialPropertyBlock();
             mbp.SetTexture("_Heightmap", _heightmap);
             mbp.SetFloat("_MaxHeight", _terrainData.MaxHeight);
@@ -75,6 +79,14 @@ public partial class GPUClipmapTerrain
             meshRenderer.SetPropertyBlock(mbp);
 
             return obj;
+        }
+
+        private void AdjustMeshBounds(MeshFilter meshFilter)
+        {
+            Bounds bounds = meshFilter.mesh.bounds;
+            bounds.extents = new Vector3(bounds.extents.x, _terrainData.MaxHeight, bounds.extents.z);
+            bounds.center = new Vector3(bounds.center.x, 0f, bounds.center.z);
+            meshFilter.mesh.bounds = bounds;
         }
     }
 }
