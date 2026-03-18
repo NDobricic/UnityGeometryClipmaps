@@ -5,10 +5,12 @@ using UnityEngine;
 public class ChunkUpdater : MonoBehaviour
 {
     public Transform player;
+    [HideInInspector] public Vector3 levelCenter;
+
     private MeshRenderer _renderer;
     private MaterialPropertyBlock _mpb;
 
-    private int _offsetPropertyId, _sizePropertyId, _playerPosId;
+    private int _offsetPropertyId, _sizePropertyId, _playerPosId, _levelCenterId;
 
     void Start()
     {
@@ -19,18 +21,21 @@ public class ChunkUpdater : MonoBehaviour
         _offsetPropertyId = Shader.PropertyToID("_Origin");
         _sizePropertyId = Shader.PropertyToID("_Size");
         _playerPosId = Shader.PropertyToID("_PlayerPos");
+        _levelCenterId = Shader.PropertyToID("_LevelCenter");
     }
 
     void Update()
     {
         _mpb.SetVector(_playerPosId, player.position);
+        _mpb.SetVector(_levelCenterId, levelCenter);
 
         if (transform.hasChanged)
         {
             _mpb.SetVector(_offsetPropertyId, transform.localPosition);
             _mpb.SetVector(_sizePropertyId, transform.localScale);
-            GetComponent<MeshRenderer>().SetPropertyBlock(_mpb);
             transform.hasChanged = false;
         }
+
+        _renderer.SetPropertyBlock(_mpb);
     }
 }

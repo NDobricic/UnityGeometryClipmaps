@@ -13,8 +13,10 @@ Shader "Custom/ChunkShader"
         _LowResHeightmap ("Low Res Heightmap", 2D) = "white" {}
         _BlendFactor ("Blend Factor", Range(0, 0.5)) = 0.125
         _TileSize ("Tile Size", Float) = 1.0
+        _LevelCenter ("Level Center", Vector) = (0, 0, 0)
         _NoiseFrequency ("Noise Frequency", Range(0.01, 200)) = 100
         _MaxHeight ("Max Height", Range(0, 100)) = 50
+        _DebugBlend ("Debug Blend", Float) = 0
     }
     SubShader
     {
@@ -47,9 +49,12 @@ Shader "Custom/ChunkShader"
         float3 _Origin;
         float3 _Size;
         float3 _PlayerPos;
+        float3 _LevelCenter;
         float _TileSize;
+        float _BlendFactor;
         float _NoiseFrequency;
         float _MaxHeight;
+        float _DebugBlend;
 
         UNITY_INSTANCING_BUFFER_START(Props)
         UNITY_INSTANCING_BUFFER_END(Props)
@@ -63,9 +68,20 @@ Shader "Custom/ChunkShader"
             o.heightmapCoord = coord;
             o.lowResHeightmapCoord = lowResCoord;
 
-            float2 distPlayer = (((_Origin.xz + v.vertex.xz * _Size.xz) - _PlayerPos.xz) / _Size.xz / _TileSize + 0.5);
-            float alpha = 1.0 - min(min(distPlayer.x, 1.0 - distPlayer.x), min(distPlayer.y, 1.0 - distPlayer.y)) * 8;
-            alpha = clamp(alpha, 0, 1);
+            float2 worldPos = _Origin.xz + v.vertex.xz * _Size.xz;
+            float2 halfExtent = _Size.xz * (_TileSize - 1.0) * 0.5;
+
+            // Smooth blend based on player position (continuous, no snap popping)
+            float blendWidth = _BlendFactor * 2.0;
+            float2 dPlayer = abs(worldPos - _PlayerPos.xz) / halfExtent;
+            float alphaSmooth = clamp((max(dPlayer.x, dPlayer.y) - (1.0 - blendWidth)) / blendWidth, 0.0, 1.0);
+
+            // Edge guarantee: force alpha=1 at geometric boundary so adjacent levels match
+            float2 dEdge = abs(worldPos - _LevelCenter.xz) / halfExtent;
+            float edgeMargin = 2.0 / (_TileSize - 1.0);
+            float alphaEdge = clamp((max(dEdge.x, dEdge.y) - (1.0 - edgeMargin)) / edgeMargin, 0.0, 1.0);
+
+            float alpha = max(alphaSmooth, alphaEdge);
             o.alpha = alpha;
             
             float4 heightData = tex2Dlod(_Heightmap, float4(coord, 0, 0));
@@ -76,15 +92,25 @@ Shader "Custom/ChunkShader"
             o.height = height;
             v.vertex.y = height * _MaxHeight;
             
-            float3 normal = heightData.gba * 2 - 1;
-            v.normal = normal;
+            float3 fineNormal = heightData.gba * 2 - 1;
+            float3 coarseNormal = lowResHeightData.gba * 2 - 1;
+            // Coarse level's normals were computed with 2x _Size, so they appear
+            // 2x steeper when transformed by this level's chunk scale. Compensate.
+            coarseNormal = normalize(float3(coarseNormal.x * 0.5, coarseNormal.y, coarseNormal.z * 0.5));
+            v.normal = normalize(lerp(fineNormal, coarseNormal, alpha));
         }
 
         void surf (Input IN, inout SurfaceOutputStandard o)
         {
             fixed4 c = tex2D (_MainTex, IN.uv_MainTex) * _Color;
-            o.Albedo = c.rgb;
-            //o.Albedo = float3(IN.alpha, IN.alpha, IN.alpha);
+            if (_DebugBlend > 0.5)
+            {
+                o.Albedo = lerp(c.rgb, float3(1, 0, 0), IN.alpha);
+            }
+            else
+            {
+                o.Albedo = c.rgb;
+            }
             
             // Use the height to influence the color if desired
             // o.Albedo *= IN.height;

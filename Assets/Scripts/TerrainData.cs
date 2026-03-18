@@ -14,5 +14,7 @@ public partial class GPUClipmapTerrain
         public ChunkPieceInfo InteriorVerticalData;
         public ChunkPieceInfo InteriorHorizontalData;
         public ChunkPieceInfo CenterCrossData;
+        public float NoiseScale;
+        public Vector2 NoiseOffset;
     }
 }

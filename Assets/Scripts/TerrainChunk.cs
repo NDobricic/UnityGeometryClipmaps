@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 public partial class GPUClipmapTerrain
 {
@@ -13,6 +14,7 @@ public partial class GPUClipmapTerrain
         protected CustomRenderTexture _lowResHeightmap;
 
         protected Vector3 _previousPlayerPos;
+        protected List<ChunkUpdater> _chunkUpdaters = new List<ChunkUpdater>();
 
         public TerrainChunk(int level, TerrainData terrainData, Shader heightmapShader, CustomRenderTexture lowResHeightmap)
         {
@@ -34,7 +36,22 @@ public partial class GPUClipmapTerrain
             _heightmap.material.SetFloat("_NoiseFrequency", 1f / (1 << level));
             _heightmap.material.SetFloat("_Size", (4f * terrainData.ChunkResolution - 1) * (1 << level));
             _heightmap.material.SetFloat("_MaxHeight", terrainData.MaxHeight);
+            _heightmap.material.SetFloat("_NoiseScale", terrainData.NoiseScale);
+            _heightmap.material.SetVector("_Offset", new Vector4(terrainData.NoiseOffset.x, 0, terrainData.NoiseOffset.y, 0));
             _heightmap.Update();
+        }
+
+        public void UpdateNoiseParameters(float maxHeight, float noiseScale, Vector2 noiseOffset)
+        {
+            _heightmap.material.SetFloat("_MaxHeight", maxHeight);
+            _heightmap.material.SetFloat("_NoiseScale", noiseScale);
+            _heightmap.material.SetVector("_Offset", new Vector4(noiseOffset.x, 0, noiseOffset.y, 0));
+        }
+
+        protected void SetLevelCenter(Vector3 center)
+        {
+            foreach (var updater in _chunkUpdaters)
+                updater.levelCenter = center;
         }
 
         protected void UpdateHeightmap(Vector3 playerPosition, Vector3 offset)
@@ -64,10 +81,10 @@ public partial class GPUClipmapTerrain
 
             var updater = obj.AddComponent<ChunkUpdater>();
             updater.player = playerTransform;
+            _chunkUpdaters.Add(updater);
 
             var mbp = new MaterialPropertyBlock();
             mbp.SetTexture("_Heightmap", _heightmap);
-            mbp.SetFloat("_MaxHeight", _terrainData.MaxHeight);
             if (_lowResHeightmap != null)
             {
                 mbp.SetTexture("_LowResHeightmap", _lowResHeightmap);

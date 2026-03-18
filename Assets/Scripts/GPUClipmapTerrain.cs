@@ -11,8 +11,16 @@ public partial class GPUClipmapTerrain : MonoBehaviour
     public int numberOfLevels = 3;
     public float maxHeight = 50.0f;
 
+    [Header("Noise")]
+    public float noiseScale = 1f;
+    public Vector2 noiseOffset = Vector2.zero;
+
+    [Header("Debug")]
+    public bool debugBlendVisualization = false;
+
     private TerrainRing[] _terrainLevels;
     private TerrainCenter _terrainCenter;
+    private Material _chunkMaterial;
 
     void Start()
     {
@@ -29,8 +37,10 @@ public partial class GPUClipmapTerrain : MonoBehaviour
         Mesh interiorHorizontalMesh = MeshGenerators.CreatePlaneMesh(2, 2 * chunkResolution + 1);
         Mesh centerCrossMesh = MeshGenerators.CreateCrossMesh(chunkResolution * 4 - 1);
 
-        Material material = new Material(Shader.Find("Custom/ChunkShader"));
-        material.SetFloat("_TileSize", 4f * chunkResolution - 1);
+        _chunkMaterial = new Material(Shader.Find("Custom/ChunkShader"));
+        _chunkMaterial.SetFloat("_TileSize", 4f * chunkResolution - 1);
+        _chunkMaterial.SetFloat("_MaxHeight", maxHeight);
+        Material material = _chunkMaterial;
 
         TerrainData terrainData = new TerrainData
         {
@@ -43,7 +53,9 @@ public partial class GPUClipmapTerrain : MonoBehaviour
             BorderHorizontalData = new ChunkPieceInfo { Mesh = borderHorizontalMesh, Material = material },
             InteriorVerticalData = new ChunkPieceInfo { Mesh = interiorVerticalMesh, Material = material },
             InteriorHorizontalData = new ChunkPieceInfo { Mesh = interiorHorizontalMesh, Material = material },
-            CenterCrossData = new ChunkPieceInfo { Mesh = centerCrossMesh, Material = material }
+            CenterCrossData = new ChunkPieceInfo { Mesh = centerCrossMesh, Material = material },
+            NoiseScale = noiseScale,
+            NoiseOffset = noiseOffset
         };
 
         Shader heightmapShader = Shader.Find("Custom/HeightmapShader");
@@ -65,10 +77,15 @@ public partial class GPUClipmapTerrain : MonoBehaviour
 
     void Update()
     {
+        _chunkMaterial.SetFloat("_MaxHeight", maxHeight);
+        _chunkMaterial.SetFloat("_DebugBlend", debugBlendVisualization ? 1f : 0f);
+
+        _terrainCenter.UpdateNoiseParameters(maxHeight, noiseScale, noiseOffset);
         _terrainCenter.UpdateChunkPositions(player.position);
-        
+
         for (int i = 0; i < numberOfLevels; i++)
         {
+            _terrainLevels[i].UpdateNoiseParameters(maxHeight, noiseScale, noiseOffset);
             _terrainLevels[i].UpdateChunkPositions(player.position);
         }
     }

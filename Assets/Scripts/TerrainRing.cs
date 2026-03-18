@@ -28,6 +28,7 @@ public partial class GPUClipmapTerrain
                 0,
                 Mathf.Floor(playerPosition.z / (2 << _level)) * (2 << _level) + size.z);
 
+            SetLevelCenter(offset);
             UpdateHeightmap(playerPosition, offset);
 
             // Update square chunks
