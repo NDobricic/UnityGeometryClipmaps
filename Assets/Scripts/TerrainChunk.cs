@@ -38,14 +38,20 @@ public partial class GPUClipmapTerrain
             _heightmap.material.SetFloat("_MaxHeight", terrainData.MaxHeight);
             _heightmap.material.SetFloat("_NoiseScale", terrainData.NoiseScale);
             _heightmap.material.SetVector("_Offset", new Vector4(terrainData.NoiseOffset.x, 0, terrainData.NoiseOffset.y, 0));
+            _heightmap.material.SetInt("_Octaves", terrainData.Octaves);
+            _heightmap.material.SetFloat("_Lacunarity", terrainData.Lacunarity);
+            _heightmap.material.SetFloat("_Persistence", terrainData.Persistence);
             _heightmap.Update();
         }
 
-        public void UpdateNoiseParameters(float maxHeight, float noiseScale, Vector2 noiseOffset)
+        public void UpdateNoiseParameters(float maxHeight, float noiseScale, Vector2 noiseOffset, int octaves, float lacunarity, float persistence)
         {
             _heightmap.material.SetFloat("_MaxHeight", maxHeight);
             _heightmap.material.SetFloat("_NoiseScale", noiseScale);
             _heightmap.material.SetVector("_Offset", new Vector4(noiseOffset.x, 0, noiseOffset.y, 0));
+            _heightmap.material.SetInt("_Octaves", octaves);
+            _heightmap.material.SetFloat("_Lacunarity", lacunarity);
+            _heightmap.material.SetFloat("_Persistence", persistence);
         }
 
         protected void SetLevelCenter(Vector3 center)

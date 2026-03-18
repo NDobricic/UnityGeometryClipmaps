@@ -16,5 +16,8 @@ public partial class GPUClipmapTerrain
         public ChunkPieceInfo CenterCrossData;
         public float NoiseScale;
         public Vector2 NoiseOffset;
+        public int Octaves;
+        public float Lacunarity;
+        public float Persistence;
     }
 }

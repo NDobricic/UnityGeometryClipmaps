@@ -2,7 +2,7 @@ float2 hash(float2 p) {
     const float3 K3 = float3(0.3333333, 0.1666667, 0.0);
     float3 p3 = frac(float3(p.x, p.y, p.x) * K3.x + K3.y);
     p3 += dot(p3, p3.zxy + K3.y);
-    return frac((p3.xxy + p3.yzz) * (p3.yzz + p3.xxy));
+    return frac((p3.xxy + p3.yzz) * (p3.yzz + p3.xxy)) * 2.0 - 1.0;
 }
 
 //uint hashint(uint a)

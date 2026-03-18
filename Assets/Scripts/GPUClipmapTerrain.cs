@@ -14,6 +14,11 @@ public partial class GPUClipmapTerrain : MonoBehaviour
     [Header("Noise")]
     public float noiseScale = 1f;
     public Vector2 noiseOffset = Vector2.zero;
+    [Range(1, 16)]
+    public int octaves = 1;
+    public float lacunarity = 2f;
+    [Range(0f, 1f)]
+    public float persistence = 0.5f;
 
     [Header("Debug")]
     public bool debugBlendVisualization = false;
@@ -55,7 +60,10 @@ public partial class GPUClipmapTerrain : MonoBehaviour
             InteriorHorizontalData = new ChunkPieceInfo { Mesh = interiorHorizontalMesh, Material = material },
             CenterCrossData = new ChunkPieceInfo { Mesh = centerCrossMesh, Material = material },
             NoiseScale = noiseScale,
-            NoiseOffset = noiseOffset
+            NoiseOffset = noiseOffset,
+            Octaves = octaves,
+            Lacunarity = lacunarity,
+            Persistence = persistence
         };
 
         Shader heightmapShader = Shader.Find("Custom/HeightmapShader");
@@ -80,12 +88,12 @@ public partial class GPUClipmapTerrain : MonoBehaviour
         _chunkMaterial.SetFloat("_MaxHeight", maxHeight);
         _chunkMaterial.SetFloat("_DebugBlend", debugBlendVisualization ? 1f : 0f);
 
-        _terrainCenter.UpdateNoiseParameters(maxHeight, noiseScale, noiseOffset);
+        _terrainCenter.UpdateNoiseParameters(maxHeight, noiseScale, noiseOffset, octaves, lacunarity, persistence);
         _terrainCenter.UpdateChunkPositions(player.position);
 
         for (int i = 0; i < numberOfLevels; i++)
         {
-            _terrainLevels[i].UpdateNoiseParameters(maxHeight, noiseScale, noiseOffset);
+            _terrainLevels[i].UpdateNoiseParameters(maxHeight, noiseScale, noiseOffset, octaves, lacunarity, persistence);
             _terrainLevels[i].UpdateChunkPositions(player.position);
         }
     }
