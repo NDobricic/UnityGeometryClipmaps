@@ -11,6 +11,9 @@ Shader "Custom/HeightmapShader"
         _Octaves("Octaves", Int) = 1
         _Lacunarity("Lacunarity", Float) = 2.0
         _Persistence("Persistence", Float) = 0.5
+        _ClipX("Clip X Strip", Vector) = (-1, -1, 0, 0)
+        _ClipZ("Clip Z Strip", Vector) = (-1, -1, 0, 0)
+        _DebugPartialUpdate("Debug Partial Update", Float) = 0
     }
 
     SubShader
@@ -38,6 +41,9 @@ Shader "Custom/HeightmapShader"
             int _Octaves;
             float _Lacunarity;
             float _Persistence;
+            float4 _ClipX; // (minU, maxU, 0, 0) or (-1,-1,0,0) = disabled
+            float4 _ClipZ; // (minV, maxV, 0, 0) or (-1,-1,0,0) = disabled
+            float _DebugPartialUpdate;
 
             // IQ's erosion-based terrain noise (from Shadertoy "Elevated")
             // Accumulates derivatives across octaves; suppresses detail on steep
@@ -62,6 +68,29 @@ Shader "Custom/HeightmapShader"
 
             float4 frag(v2f_customrendertexture IN) : COLOR
             {
+                // Partial update: discard texels outside the update strips
+                if (_ClipX.x >= 0 || _ClipZ.x >= 0)
+                {
+                    float2 uv = IN.globalTexcoord.xy;
+                    bool keep = false;
+
+                    if (_ClipX.x >= 0)
+                    {
+                        keep = (_ClipX.x <= _ClipX.y)
+                            ? (uv.x >= _ClipX.x && uv.x < _ClipX.y)
+                            : (uv.x >= _ClipX.x || uv.x < _ClipX.y);
+                    }
+
+                    if (!keep && _ClipZ.x >= 0)
+                    {
+                        keep = (_ClipZ.x <= _ClipZ.y)
+                            ? (uv.y >= _ClipZ.x && uv.y < _ClipZ.y)
+                            : (uv.y >= _ClipZ.x || uv.y < _ClipZ.y);
+                    }
+
+                    if (!keep) discard;
+                }
+
                 float3 coordOffset = floor(_Origin);
                 float3 fraction = _Origin - floor(_Origin);
 
@@ -88,6 +117,13 @@ Shader "Custom/HeightmapShader"
 
                 float3 normal = normalize(float3(-derivatives.x * _Size, _MaxHeight, -derivatives.y * _Size));
                 normal = normal * 0.5 + 0.5;
+
+                if (_DebugPartialUpdate > 0.5)
+                {
+                    bool isPartial = (_ClipX.x >= 0 || _ClipZ.x >= 0);
+                    float3 debugColor = isPartial ? float3(1, 0, 0) : float3(0, 1, 0);
+                    return float4(h, debugColor);
+                }
 
                 return float4(h, normal);
             }

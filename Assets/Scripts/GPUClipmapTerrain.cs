@@ -22,6 +22,7 @@ public partial class GPUClipmapTerrain : MonoBehaviour
 
     [Header("Debug")]
     public bool debugBlendVisualization = false;
+    public bool debugPartialUpdates = false;
 
     private TerrainRing[] _terrainLevels;
     private TerrainCenter _terrainCenter;
@@ -87,12 +88,15 @@ public partial class GPUClipmapTerrain : MonoBehaviour
     {
         _chunkMaterial.SetFloat("_MaxHeight", maxHeight);
         _chunkMaterial.SetFloat("_DebugBlend", debugBlendVisualization ? 1f : 0f);
+        _chunkMaterial.SetFloat("_DebugPartialUpdate", debugPartialUpdates ? 1f : 0f);
 
+        _terrainCenter.SetDebugPartialUpdates(debugPartialUpdates);
         _terrainCenter.UpdateNoiseParameters(maxHeight, noiseScale, noiseOffset, octaves, lacunarity, persistence);
         _terrainCenter.UpdateChunkPositions(player.position);
 
         for (int i = 0; i < numberOfLevels; i++)
         {
+            _terrainLevels[i].SetDebugPartialUpdates(debugPartialUpdates);
             _terrainLevels[i].UpdateNoiseParameters(maxHeight, noiseScale, noiseOffset, octaves, lacunarity, persistence);
             _terrainLevels[i].UpdateChunkPositions(player.position);
         }

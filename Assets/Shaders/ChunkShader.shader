@@ -17,6 +17,7 @@ Shader "Custom/ChunkShader"
         _NoiseFrequency ("Noise Frequency", Range(0.01, 200)) = 100
         _MaxHeight ("Max Height", Range(0, 100)) = 50
         _DebugBlend ("Debug Blend", Float) = 0
+        _DebugPartialUpdate ("Debug Partial Update", Float) = 0
     }
     SubShader
     {
@@ -40,6 +41,7 @@ Shader "Custom/ChunkShader"
             float2 lowResHeightmapCoord;
             float alpha;
             float height;
+            float3 debugColor;
             INTERNAL_DATA
         };
 
@@ -55,6 +57,7 @@ Shader "Custom/ChunkShader"
         float _NoiseFrequency;
         float _MaxHeight;
         float _DebugBlend;
+        float _DebugPartialUpdate;
 
         UNITY_INSTANCING_BUFFER_START(Props)
         UNITY_INSTANCING_BUFFER_END(Props)
@@ -92,6 +95,15 @@ Shader "Custom/ChunkShader"
             o.height = height;
             v.vertex.y = height * _MaxHeight;
             
+            if (_DebugPartialUpdate > 0.5)
+            {
+                o.debugColor = heightData.gba;
+            }
+            else
+            {
+                o.debugColor = float3(0, 0, 0);
+            }
+
             float3 fineNormal = heightData.gba * 2 - 1;
             float3 coarseNormal = lowResHeightData.gba * 2 - 1;
             // Coarse level's normals were computed with 2x _Size, so they appear
@@ -103,7 +115,11 @@ Shader "Custom/ChunkShader"
         void surf (Input IN, inout SurfaceOutputStandard o)
         {
             fixed4 c = tex2D (_MainTex, IN.uv_MainTex) * _Color;
-            if (_DebugBlend > 0.5)
+            if (_DebugPartialUpdate > 0.5)
+            {
+                o.Albedo = IN.debugColor;
+            }
+            else if (_DebugBlend > 0.5)
             {
                 o.Albedo = lerp(c.rgb, float3(1, 0, 0), IN.alpha);
             }
